@@ -7,9 +7,12 @@ import gin.edit.line.DeleteLine;
 import gin.edit.line.LineEdit;
 import gin.edit.Edit;
 import gin.edit.llm.LLMMaskedStatement;
+import gin.edit.llm.LLMReplaceStatement;
 import gin.test.UnitTest;
 import gin.test.UnitTestResultSet;
 import org.pmw.tinylog.Logger;
+
+import com.fasterxml.jackson.annotation.JsonTypeInfo.None;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -31,13 +34,48 @@ public abstract class LocalSearchSimple extends GP {
     // Probability of adding an edit during uniform crossover
     private static final double MUTATE_PROBABILITY = 0.5;
 
+    // Whether to use LLM edits
+    private boolean ifLLM = false;
+
+    private Class <? extends Edit> LLMedit = null;
+
+    private List<Class <? extends Edit>> NoneLLMedit = new ArrayList<>();
+
     public LocalSearchSimple(String[] args) {
         super(args);
+        SetLLMedits();
     }
 
     // Constructor used for testing
     public LocalSearchSimple(File projectDir, File methodFile) {
-        super(projectDir, methodFile);
+        super(projectDir, methodFile); 
+        SetLLMedits();
+    }
+
+    private void SetLLMedits () {
+        if (super.editTypes.contains(LLMMaskedStatement.class) || super.editTypes.contains(LLMReplaceStatement.class)) {
+            ifLLM = true;
+            if (super.editTypes.contains(LLMMaskedStatement.class)) {
+                LLMedit = LLMMaskedStatement.class;
+            } else if (super.editTypes.contains(LLMReplaceStatement.class)) {
+                LLMedit = LLMReplaceStatement.class;
+            }
+
+            for (Class <? extends Edit> edit : super.editTypes) {
+                if (edit != LLMedit) {
+                    NoneLLMedit.add(edit);
+                }
+            }
+        }
+
+
+        Logger.info("=== LocalSearchSimple ===");
+        Logger.info("LLM edits: " + ifLLM);
+        Logger.info("None LLM edits: " + NoneLLMedit.toString());
+        Logger.info("LLM edit: " + LLMedit);
+        Logger.info("=====================================");
+
+
     }
 
     // Whatever initialisation needs to be done for fitness calculations
@@ -106,14 +144,17 @@ public abstract class LocalSearchSimple extends GP {
 
         Patch neighbour = patch.clone();
 
-        if (neighbour.size() > 0 && super.mutationRng.nextFloat() > 0.75) {
-            neighbour.remove(super.mutationRng.nextInt(neighbour.size()));
-        } else if (neighbour.size() > 0 && super.mutationRng.nextFloat() > 0.25) {
-            neighbour.addRandomEditOfClasses(super.mutationRng, Arrays.asList(LLMMaskedStatement.class));
-        } 
-        else {
-            neighbour.addRandomEditOfClasses(super.mutationRng, Edit.getEditClassesOfType(Edit.EditType.STATEMENT));
+        if(ifLLM){
+            if (neighbour.size() > 0 && super.mutationRng.nextFloat() > 0.5) {
+                neighbour.addRandomEditOfClasses(super.mutationRng, Arrays.asList(LLMedit));
+            } 
+            else {
+                neighbour.addRandomEditOfClasses(super.mutationRng, NoneLLMedit);
+            }
+        } else {
+            neighbour.addRandomEditOfClasses(super.mutationRng, super.editTypes);
         }
+
 
         return neighbour;
 
@@ -121,10 +162,11 @@ public abstract class LocalSearchSimple extends GP {
 
 
     // Adds a random edit of the given type with equal probability among allowed types
+    // TODO: This is a bit of a hack, as it assumes that if only put one edit type, it is LLMReplaceStatement or LLMMaskedStatement
     protected Patch mutate(Patch oldPatch) {
         Patch patch = oldPatch.clone();
-        patch.addRandomEditOfClasses(super.mutationRng, super.editTypes);
-        // patch = neighbour(patch);
+        patch = neighbour(patch);
+
         return patch;
     }
 
