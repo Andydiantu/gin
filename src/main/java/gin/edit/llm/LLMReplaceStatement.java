@@ -15,6 +15,7 @@ import org.pmw.tinylog.Logger;
 import com.github.javaparser.ParseProblemException;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.Node;
+import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.utils.Log;
 
@@ -115,7 +116,7 @@ public class LLMReplaceStatement extends StatementEdit {
         // }
         // Logger.info("===================================================");
 
-        Node destination = sf.getNode(destinationStatement);
+        Node destination = sf.getTargetMethodRootNode().get(0);
 
         if (destination == null) {
             return Collections.singletonList(sf); // targeting a deleted location just does nothing.
@@ -183,8 +184,10 @@ public class LLMReplaceStatement extends StatementEdit {
     
 
         	try {
-                Statement stmt;
-                stmt = StaticJavaParser.parseBlock(str);
+                // extract the method body from the response
+                MethodDeclaration method;
+                method = StaticJavaParser.parseMethodDeclaration(str);
+                Statement stmt = method.getBody().orElse(null);
                 replacementStrings.add(str);
                 replacementStatements.add(stmt);
                 
