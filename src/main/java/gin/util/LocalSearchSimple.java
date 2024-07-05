@@ -144,7 +144,7 @@ public abstract class LocalSearchSimple extends GP {
 
         Patch neighbour = patch.clone();
 
-        if(ifLLM){
+        if(ifLLM && NoneLLMedit.size() > 0){
             if (neighbour.size() > 0 && super.mutationRng.nextFloat() > 0.5) {
                 neighbour.addRandomEditOfClasses(super.mutationRng, Arrays.asList(LLMedit));
             } 
