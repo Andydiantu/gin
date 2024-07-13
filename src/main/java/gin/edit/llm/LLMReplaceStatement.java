@@ -90,7 +90,7 @@ public class LLMReplaceStatement extends StatementEdit {
 
     @Override
     public SourceFile apply(SourceFile sourceFile, Object tagReplacements) {
-    	List<SourceFile> l = applyMultiple(sourceFile, 5, (Map<PromptTemplate.PromptTag,String>)tagReplacements);
+    	List<SourceFile> l = applyMultiple(sourceFile, 2, (Map<PromptTemplate.PromptTag,String>)tagReplacements);
 
     	if (l.size() > 0) {
     		return l.get(0); // TODO for now, just pick the first variant provided. Later, call applyMultiple from LocalSearch instead
@@ -115,8 +115,10 @@ public class LLMReplaceStatement extends StatementEdit {
 
         // }
         // Logger.info("===================================================");
+        
 
-        Node destination = sf.getTargetMethodRootNode().get(0);
+        Node destination = sf.getNode(destinationStatement);
+        // Node destination = sf.getTargetMethodRootNode().get(0);
 
         if (destination == null) {
             return Collections.singletonList(sf); // targeting a deleted location just does nothing.
@@ -185,17 +187,36 @@ public class LLMReplaceStatement extends StatementEdit {
 
         	try {
                 // extract the method body from the response
-                MethodDeclaration method;
-                method = StaticJavaParser.parseMethodDeclaration(str);
-                Statement stmt = method.getBody().orElse(null);
+
+                Statement stmt;
+                stmt = StaticJavaParser.parseBlock(str);
+
+                // MethodDeclaration method;
+                // method = StaticJavaParser.parseMethodDeclaration(str);
+                // Statement stmt = method.getBody().orElse(null);
                 replacementStrings.add(str);
                 replacementStatements.add(stmt);
                 
 
                 Logger.info("here is the parsed statement:");
             }
+            
+
             catch (ParseProblemException e) {
-                Logger.info("PARSE PROBLEM EXCEPTION");
+                
+                Logger.info("PARSE PROBLEM EXCEPTION, trying with method declaration");
+                try{
+                    MethodDeclaration method;
+                    method = StaticJavaParser.parseMethodDeclaration(str);
+                    Statement stmt = method.getBody().orElse(null);
+                    replacementStrings.add(str);
+                    replacementStatements.add(stmt); 
+                    
+                } catch (ParseProblemException e2) {
+                    Logger.info("PARSE PROBLEM EXCEPTION 2");
+                    Logger.info(e2);
+                    continue;
+                }
                 continue;
             }
 

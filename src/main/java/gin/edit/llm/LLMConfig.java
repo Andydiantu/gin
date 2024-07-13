@@ -51,15 +51,25 @@ public class LLMConfig {
                 + "Do not include any method or class declarations."
                 + "label all code as java.")), 
 
-		MASKED(new PromptTemplate("I am working on Java and require help in completing a missing line of a function, given its context. "
-				+ "I have the following code snippet belongs to to project" + PromptTag.PROJECT.withEscape() + ":"
+		// MASKED(new PromptTemplate("I am working on Java and require help in completing a missing line of a function, given its context. "
+		// 		+ "I have the following code snippet belongs to to project" + PromptTag.PROJECT.withEscape() + ":"
+		// 		+ "```\n"
+		// 		+ PromptTag.DESTINATION.withEscape()
+		// 		+ "\n"
+		// 		+ "```\n"
+		// 		+ "Please replace the <<PLACEHOLDER>> sign with " + PromptTag.COUNT.withEscape() +  " different meaningful implementations for the following code. "	
+		// 		+ "Return each suggestion in a complete and separate function body. "
+		// 		+ "Ensure the provided code is wrapped with triple backticks if it’s not already. "
+		// 		+ "Label all code as java.")),
+
+		MASKED(new PromptTemplate("Please replace <<PLACEHOLDER>> sign in the function below with meaningfull implementation, \n"
 				+ "```\n"
 				+ PromptTag.DESTINATION.withEscape()
 				+ "\n"
 				+ "```\n"
-				+ "Please replace the <<PLACEHOLDER>> sign with " + PromptTag.COUNT.withEscape() +  " different meaningful implementations for the following code."	
-				+ "Ensure the provided code is wrapped with triple backticks if it’s not already."
-				+ "label all code as java.")),;
+				+ "This code belongs to project " + PromptTag.PROJECT.withEscape() + ". "
+				+ "Only return the complete function. "
+				+ "Label all code as java.")),;
 		
 		
 		

@@ -19,6 +19,9 @@ import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.comments.LineComment;
 import com.github.javaparser.ast.stmt.EmptyStmt;
+import com.github.javaparser.ast.stmt.ExpressionStmt;
+import com.github.javaparser.ast.expr.VariableDeclarationExpr;
+
 
 
 import gin.SourceFile;
@@ -68,7 +71,7 @@ public class LLMMaskedStatement extends StatementEdit{
 
     @Override
     public SourceFile apply(SourceFile sourceFile, Object tagReplacements) {
-    	List<SourceFile> l = applyMultiple(sourceFile, 5, (Map<PromptTemplate.PromptTag,String>)tagReplacements);
+    	List<SourceFile> l = applyMultiple(sourceFile, 2, (Map<PromptTemplate.PromptTag,String>)tagReplacements);
 
     	if (l.size() > 0) {
     		return l.get(0); // TODO for now, just pick the first variant provided. Later, call applyMultiple from LocalSearch instead
@@ -82,6 +85,7 @@ public class LLMMaskedStatement extends StatementEdit{
         
 
         Statement statementToMask = drawStatementFromSourceFile(sf, (rng != null ? rng : new Random()));
+        Logger.info( "Statement to mask: " + statementToMask.toString());
 
         LLMQuery llmQuery;
 
@@ -184,7 +188,28 @@ public class LLMMaskedStatement extends StatementEdit{
         //TODO choose meaningfull statemetn to mask, 
         // and do not choose nested staemetn like entire if statement
         List<Statement> stmts = sourceFileTree.getTargetMethodRootNode().get(0).findAll(Statement.class);
-        return stmts.get(rng.nextInt(stmts.size()));
+
+        
+        Statement stmt = stmts.get(rng.nextInt(stmts.size()));
+        while(ifNonImpactfulStatement(stmt) && stmts.size() > 1){
+            Logger.info("Non-impactful statement found, trying another one " + stmt.toString());
+            stmts.remove(stmt);
+            stmt = stmts.get(rng.nextInt(stmts.size()));
+        }
+        return stmt;
+    }
+
+    public boolean ifNonImpactfulStatement(Statement stmt){
+        //TODO check if the statement is non-impactful
+        if (stmt.isExpressionStmt()){
+            ExpressionStmt exprStmt = stmt.asExpressionStmt();
+
+            if(exprStmt.getExpression().isVariableDeclarationExpr()
+            || exprStmt.getExpression().isAssignExpr()){
+                return true;
+            }
+        }
+        return false;
     }
 
     public String maskCode(SourceFileTree sf, Statement targetStatement){
