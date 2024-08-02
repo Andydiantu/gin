@@ -2,6 +2,8 @@ package gin.edit.llm;
 
 import gin.edit.statement.StatementEdit;
 
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -9,17 +11,21 @@ import java.util.Map;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.io.FileWriter;
+
 
 import org.pmw.tinylog.Logger;
 
 import com.github.javaparser.ParseProblemException;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.stmt.Statement;
+import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.comments.LineComment;
 import com.github.javaparser.ast.stmt.EmptyStmt;
 import com.github.javaparser.ast.stmt.ExpressionStmt;
+import com.github.javaparser.ast.stmt.IfStmt;
 import com.github.javaparser.ast.expr.VariableDeclarationExpr;
 
 
@@ -29,6 +35,7 @@ import gin.SourceFileTree;
 import gin.edit.Edit;
 import gin.edit.llm.PromptTemplate.PromptTag;
 import gin.edit.statement.StatementEdit;
+import gin.edit.llm.TypeManager;
 
 
 public class LLMMaskedStatement extends StatementEdit{
@@ -42,6 +49,8 @@ public class LLMMaskedStatement extends StatementEdit{
     private String lastPrompt;
 
     private Random rng = null;
+
+    private String csvPath = "/home/diantu/IdeaProjects/TestOllama4jLLm/output.csv";
 
     public LLMMaskedStatement(SourceFile sourceFile, Random rng, PromptTemplate promptTemplate) {
         SourceFileTree sf = (SourceFileTree) sourceFile;
@@ -136,21 +145,39 @@ public class LLMMaskedStatement extends StatementEdit{
     
 
         	try {
-                MethodDeclaration method;
-                method = StaticJavaParser.parseMethodDeclaration(str);
-                Statement stmt = method.getBody().orElse(null);
+                // extract the method body from the response
+
+                Statement stmt;
+                stmt = StaticJavaParser.parseBlock(str);
+
+                // MethodDeclaration method;
+                // method = StaticJavaParser.parseMethodDeclaration(str);
+                // Statement stmt = method.getBody().orElse(null);
                 replacementStrings.add(str);
                 replacementStatements.add(stmt);
                 
 
                 Logger.info("here is the parsed statement:");
-                Logger.info(stmt);
             }
+            
+
             catch (ParseProblemException e) {
-                Logger.info("PARSE PROBLEM EXCEPTION");
+                
+                Logger.info("PARSE PROBLEM EXCEPTION, trying with method declaration");
+                try{
+                    MethodDeclaration method;
+                    method = StaticJavaParser.parseMethodDeclaration(str);
+                    Statement stmt = method.getBody().orElse(null);
+                    replacementStrings.add(str);
+                    replacementStatements.add(stmt); 
+                    
+                } catch (ParseProblemException e2) {
+                    Logger.info("PARSE PROBLEM EXCEPTION 2");
+                    Logger.info(e2);
+                    continue;
+                }
                 continue;
             }
-
             Logger.info("============");
 
         }
@@ -190,22 +217,48 @@ public class LLMMaskedStatement extends StatementEdit{
         List<Statement> stmts = sourceFileTree.getTargetMethodRootNode().get(0).findAll(Statement.class);
 
         
-        Statement stmt = stmts.get(rng.nextInt(stmts.size()));
-        while(ifNonImpactfulStatement(stmt) && stmts.size() > 1){
-            Logger.info("Non-impactful statement found, trying another one " + stmt.toString());
-            stmts.remove(stmt);
-            stmt = stmts.get(rng.nextInt(stmts.size()));
+        TypeManager typeManager = new TypeManager();
+
+        List<Statement> filteredStmts = filterStatementsByType(stmts, typeManager.getCurrentClass());
+
+        Logger.info("Filtered statements: " + filteredStmts.size() + " Type is " + typeManager.getCurrentType());
+
+        if(filteredStmts.size() <= 0){
+            Logger.error("No statements found for type " + typeManager.getCurrentType());
+            writeRow(csvPath, "Error");
+            throw new RuntimeException("No statements found for type " + typeManager.getCurrentType());
+        } else {
+            writeRow(csvPath, typeManager.getCurrentType());
         }
+
+
+
+        Statement stmt = filteredStmts.get(rng.nextInt(filteredStmts.size()));
+        typeManager.addCurrentCount();
+        // while(ifNonImpactfulStatement(stmt) && stmts.size() > 1){
+        //     Logger.info("Non-impactful statement found, trying another one " + stmt.toString());
+        //     stmts.remove(stmt);
+        //     stmt = stmts.get(rng.nextInt(stmts.size()));
+        // }
         return stmt;
     }
+
+    public static <T extends Statement> List<T> filterStatementsByType(List<Statement> statements, Class<T> type) {
+        List<T> filteredStmts = new ArrayList<>();
+        for (Statement stmt : statements) {
+            if (type.isInstance(stmt)) {
+                filteredStmts.add(type.cast(stmt));
+            }
+        }
+        return filteredStmts;
+    } 
 
     public boolean ifNonImpactfulStatement(Statement stmt){
         //TODO check if the statement is non-impactful
         if (stmt.isExpressionStmt()){
             ExpressionStmt exprStmt = stmt.asExpressionStmt();
 
-            if(exprStmt.getExpression().isVariableDeclarationExpr()
-            || exprStmt.getExpression().isAssignExpr()){
+            if(exprStmt.getExpression().isVariableDeclarationExpr()){
                 return true;
             }
         }
@@ -216,7 +269,10 @@ public class LLMMaskedStatement extends StatementEdit{
 
         Statement placeholderStatement = new EmptyStmt();
 
+        // Node targetMethodRootNode = sf.getNode(destinationStatement);
         Node targetMethodRootNode = sf.getTargetMethodRootNode().get(0).clone();
+
+
         List<Statement> stmts = targetMethodRootNode.findAll(Statement.class);
         Statement stmt = stmts.get(rng.nextInt(stmts.size()));
         placeholderStatement.setComment(new LineComment("<<PLACEHOLDER>>"));
@@ -237,16 +293,20 @@ public class LLMMaskedStatement extends StatementEdit{
         return maskedCode;
     }
 
+    public static void writeRow(String filePath, String row) {
+        try (FileWriter fileWriter = new FileWriter(filePath, true);
+             PrintWriter printWriter = new PrintWriter(fileWriter)) {
+
+            printWriter.println(row);
+
+        } catch (IOException e) {
+            System.err.println("Error writing CSV file: " + e.getMessage());
+        }
+    }
 
     @Override
     public String toString() {
         return this.getClass().getCanonicalName() + " \"" + destinationFilename + "\":" + destinationStatement + "\nPrompt: !!!\n" + lastPrompt +  "\n!!! --> !!!\n" + lastReplacement + "\n!!!";
     }
-
-
-
-
-
-
     
 }

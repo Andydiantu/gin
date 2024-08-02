@@ -105,7 +105,9 @@ public class RandomSampler extends Sampler {
                     patch.addRandomEditOfClasses(prng, editTypes);
                 }
 
-                Logger.info("Testing random patch " + patch + " for method: " + method + " with ID " + methodID);
+                Logger.info(patch.getEdits() + " edits");
+
+                Logger.info("Testing random patch " + patch.toString() + " for method: " + method + " with ID " + methodID);
 
                 // Test the patched source file
                 UnitTestResultSet results = testPatch(method.getClassName(), method.getGinTests(), patch, null);

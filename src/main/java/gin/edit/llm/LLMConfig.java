@@ -15,7 +15,7 @@ public class LLMConfig {
         		+ "\n"
         		+ "```\n")), 
 		
-		MEDIUM(new PromptTemplate("Give me " + PromptTag.COUNT.withEscape() + " different Java implementations of this method body:"
+		MEDIUM(new PromptTemplate("Give me " + PromptTag.COUNT.withEscape() + " different Java implementations of this method:"
         		+ "```\n"
         		+ PromptTag.DESTINATION.withEscape()
         		+ "\n"
@@ -62,14 +62,15 @@ public class LLMConfig {
 		// 		+ "Ensure the provided code is wrapped with triple backticks if it’s not already. "
 		// 		+ "Label all code as java.")),
 
-		MASKED(new PromptTemplate("Please replace <<PLACEHOLDER>> sign in the function below with meaningfull implementation, \n"
+		MASKED(new PromptTemplate("Please replace <<PLACEHOLDER>> sign in the method below with meaningfull implementation, \n"
 				+ "```\n"
 				+ PromptTag.DESTINATION.withEscape()
 				+ "\n"
 				+ "```\n"
 				+ "This code belongs to project " + PromptTag.PROJECT.withEscape() + ". "
-				+ "Only return the complete function. "
-				+ "Label all code as java.")),;
+				+ "Wrap all code in curly braces, if it is not already. "
+                + "Do not include any method or class declarations. "
+                + "Label all code as java.")),;
 		
 		
 		
