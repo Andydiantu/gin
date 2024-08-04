@@ -136,18 +136,37 @@ public class LLMMaskedStatement extends StatementEdit{
     
 
         	try {
-                MethodDeclaration method;
-                method = StaticJavaParser.parseMethodDeclaration(str);
-                Statement stmt = method.getBody().orElse(null);
+                // extract the method body from the response
+
+                Statement stmt;
+                stmt = StaticJavaParser.parseBlock(str);
+
+                // MethodDeclaration method;
+                // method = StaticJavaParser.parseMethodDeclaration(str);
+                // Statement stmt = method.getBody().orElse(null);
                 replacementStrings.add(str);
                 replacementStatements.add(stmt);
                 
 
                 Logger.info("here is the parsed statement:");
-                Logger.info(stmt);
             }
+            
+
             catch (ParseProblemException e) {
-                Logger.info("PARSE PROBLEM EXCEPTION");
+                
+                Logger.info("PARSE PROBLEM EXCEPTION, trying with method declaration");
+                try{
+                    MethodDeclaration method;
+                    method = StaticJavaParser.parseMethodDeclaration(str);
+                    Statement stmt = method.getBody().orElse(null);
+                    replacementStrings.add(str);
+                    replacementStatements.add(stmt); 
+                    
+                } catch (ParseProblemException e2) {
+                    Logger.info("PARSE PROBLEM EXCEPTION 2");
+                    Logger.info(e2);
+                    continue;
+                }
                 continue;
             }
 
@@ -192,7 +211,7 @@ public class LLMMaskedStatement extends StatementEdit{
         
         Statement stmt = stmts.get(rng.nextInt(stmts.size()));
         while(ifNonImpactfulStatement(stmt) && stmts.size() > 1){
-            Logger.info("Non-impactful statement found, trying another one " + stmt.toString());
+            Logger.info("Non-impactful statement found, trying another one, the statement is: " + stmt.toString());
             stmts.remove(stmt);
             stmt = stmts.get(rng.nextInt(stmts.size()));
         }
@@ -201,22 +220,25 @@ public class LLMMaskedStatement extends StatementEdit{
 
     public boolean ifNonImpactfulStatement(Statement stmt){
         //TODO check if the statement is non-impactful
-        if (stmt.isExpressionStmt()){
-            ExpressionStmt exprStmt = stmt.asExpressionStmt();
-
-            if(exprStmt.getExpression().isVariableDeclarationExpr()
-            || exprStmt.getExpression().isAssignExpr()){
-                return true;
-            }
+        if (stmt.isExpressionStmt() || 
+            stmt.isBlockStmt() ||
+            stmt.isForStmt() ||
+            stmt.isIfStmt() ||
+            stmt.isReturnStmt() ||
+            stmt.isWhileStmt() ||
+            stmt.isThrowStmt()){
+                return false;
         }
-        return false;
+        return true;
     }
 
     public String maskCode(SourceFileTree sf, Statement targetStatement){
 
         Statement placeholderStatement = new EmptyStmt();
 
-        Node targetMethodRootNode = sf.getTargetMethodRootNode().get(0).clone();
+        // Node targetMethodRootNode = sf.getTargetMethodRootNode().get(0).clone();
+        Node targetMethodRootNode = sf.getNode(destinationStatement);
+
         List<Statement> stmts = targetMethodRootNode.findAll(Statement.class);
         Statement stmt = stmts.get(rng.nextInt(stmts.size()));
         placeholderStatement.setComment(new LineComment("<<PLACEHOLDER>>"));
