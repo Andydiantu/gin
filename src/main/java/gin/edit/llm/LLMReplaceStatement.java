@@ -76,6 +76,8 @@ public class LLMReplaceStatement extends StatementEdit {
         this.destinationFilename = destinationFilename;
         this.destinationStatement = destinationStatement;
 
+        this.promptTemplate = LLMConfig.getDefaultPromptTemplate();
+
         this.lastReplacement = "NOT YET APPLIED";
     }
 

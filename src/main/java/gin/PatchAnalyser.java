@@ -20,6 +20,7 @@ import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.LogManager;
 
 /**
  * A handy utility for analysing patches. Not part of the main gin system.
@@ -180,6 +181,7 @@ public class PatchAnalyser implements Serializable {
         SourceFileLine sourceFileLine = new SourceFileLine(source.getAbsolutePath(), null);
         SourceFileTree sourceFileTree = new SourceFileTree(source.getAbsolutePath(), null);
 
+        Logger.info("Analysing patch for Source: " + source.getAbsolutePath());
         InternalTestRunner testRunner = new InternalTestRunner(className, classPath, testClassName, failFast);
 
         // Dump statement numbering to a file
