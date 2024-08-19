@@ -70,7 +70,27 @@ public class LLMConfig {
 				+ "This code belongs to project " + PromptTag.PROJECT.withEscape() + ". "
 				+ "Wrap all code in curly braces, if it is not already. "
 				+ "Do not include any method or class declarations. "
-				+ "Label all code as java.")),;
+				+ "Label all code as java.")),
+
+		MASKED_SIMPLE_RUNTIME(new PromptTemplate("Please replace <<PLACEHOLDER>> sign in the method below with meaningfull implementation with shorter runtime, \n"
+				+ "```\n"
+				+ PromptTag.DESTINATION.withEscape()
+				+ "\n"
+				+ "```\n"
+				+ "This code belongs to project " + PromptTag.PROJECT.withEscape() + ". "
+				+ "Wrap all code in curly braces, if it is not already. "
+				+ "Do not include any method or class declarations. "
+				+ "Label all code as java.")),
+				
+		MASKED_RUNTIME(new PromptTemplate("Replace the <<PLACEHOLDER>> in the method below with an optimized implementation focusing on minimizing both time and space complexity.\n"
+				+ "```\n"
+				+ PromptTag.DESTINATION.withEscape()
+				+ "\n"
+				+ "```\n"
+				+ "Ensure the code is wrapped in curly braces if not already. "
+				+ "Do not include any method or class declarations. "
+				+ "Label all code as java."
+				+ "This code belongs to project " + PromptTag.PROJECT.withEscape() + ". ")),;;
 		
 		
 		
