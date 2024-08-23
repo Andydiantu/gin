@@ -136,9 +136,9 @@ public class LLMMaskedStatement extends StatementEdit{
     
 
         	try {
-                MethodDeclaration method;
-                method = StaticJavaParser.parseMethodDeclaration(str);
-                Statement stmt = method.getBody().orElse(null);
+                Statement stmt;
+                stmt = StaticJavaParser.parseBlock(str);
+                
                 replacementStrings.add(str);
                 replacementStatements.add(stmt);
                 
@@ -147,7 +147,19 @@ public class LLMMaskedStatement extends StatementEdit{
                 Logger.info(stmt);
             }
             catch (ParseProblemException e) {
-                Logger.info("PARSE PROBLEM EXCEPTION");
+                Logger.info("PARSE PROBLEM EXCEPTION, trying with method declaration");
+                try{
+                    MethodDeclaration method;
+                    method = StaticJavaParser.parseMethodDeclaration(str);
+                    Statement stmt = method.getBody().orElse(null);
+                    replacementStrings.add(str);
+                    replacementStatements.add(stmt); 
+
+                } catch (ParseProblemException e2) {
+                    Logger.info("PARSE PROBLEM EXCEPTION 2");
+                    Logger.info(e2);
+                    continue;
+                }
                 continue;
             }
 
