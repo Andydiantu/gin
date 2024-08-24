@@ -216,8 +216,7 @@ public class LLMMaskedStatement extends StatementEdit{
         if (stmt.isExpressionStmt()){
             ExpressionStmt exprStmt = stmt.asExpressionStmt();
 
-            if(exprStmt.getExpression().isVariableDeclarationExpr()
-            || exprStmt.getExpression().isAssignExpr()){
+            if(exprStmt.getExpression().isVariableDeclarationExpr()){
                 return true;
             }
         }

@@ -62,7 +62,9 @@ public class LLMConfig {
 		// 		+ "Ensure the provided code is wrapped with triple backticks if it’s not already. "
 		// 		+ "Label all code as java.")),
 
-		MASKED(new PromptTemplate("Please replace <<PLACEHOLDER>> sign in the function below with meaningfull implementation, \n"
+		MASKED(new PromptTemplate("Please replace the <<PLACEHOLDER>> sign in the function below with an optimized and meaningful implementation that ensures better runtime efficiency." 
+				+ "Focus on reducing time complexity and optimizing resource usage." + //
+						" \n"
 				+ "```\n"
 				+ PromptTag.DESTINATION.withEscape()
 				+ "\n"
