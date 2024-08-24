@@ -33,6 +33,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 
+import com.opencsv.CSVReader;
+import com.opencsv.exceptions.CsvException;
+
 public class Patch_Comparison implements Serializable{
     @Serial
     private static final long serialVersionUID = -3749197264292832819L;
@@ -88,22 +91,24 @@ public class Patch_Comparison implements Serializable{
         Set<Integer> patchIndexDic = new HashSet<>();
         String line = "";
 
-        try (BufferedReader br = new BufferedReader(new FileReader(csvPath))) {
+        try (CSVReader reader = new CSVReader(new FileReader(csvPath))) {
+            // Read the header
+            String[] header = reader.readNext();
 
-            line = br.readLine();
+            if (header != null) {
+                System.out.println("Header:");
+                for (String column : header) {
+                    System.out.print(column + " | ");
+                }
+                System.out.println();
+            }
 
-            while ((line = br.readLine()) != null) {
-
+            List<String[]> allRows = reader.readAll();
             
 
-                String[] parts = line.split(",");
-                String patch = parts[2];
-
-                if (parts[0].equals("\"\"PatchIndex\"\"")){
-                    continue;
-                }
-
-                int patchIndex = Integer.parseInt(parts[0].replace("\"",""));
+            for (String[] row : allRows) {
+                String patch = row[2];  
+                int patchIndex = Integer.parseInt(row[0]);
 
                 if(patchIndexDic.contains(patchIndex)) {
                     continue;
@@ -112,14 +117,14 @@ public class Patch_Comparison implements Serializable{
                 }
                 
                 System.out.println("Patch: " + patch);
-                System.out.println(parts[0] + " " + parts[1] + " " + parts[2]);
+                System.out.println(row[0] + " " + row[1] + " " + row[2]);
 
-                String regex = "(?<=\\s\"\")[^\"]+(?=\"\")";
+                String regex = "\"([^\"]+\\.java)\"";;
                 Pattern pattern = Pattern.compile(regex);
                 Matcher matcher = pattern.matcher(patch);
 
                 if (matcher.find()) {
-                    String filePath = matcher.group();
+                    String filePath = matcher.group().replace("\"", "");
                     System.out.println("Extracted file path: " + filePath);
 
                     String sourceAbsPath = "/home/diantu/Documents/gin/examples/jcodec/" + filePath;
@@ -130,9 +135,57 @@ public class Patch_Comparison implements Serializable{
                 } else {
                     System.out.println("Wrong patch format");
                 }
-                
+
+
             }
-        } catch (IOException e) {
+
+
+
+            // while ((line = br.readLine()) != null) {
+
+            
+
+            //     String[] parts = line.split(",");
+            //     // System.out.println(line);
+            //     if(parts.length < 3) {
+            //         continue;
+            //     }
+            //     String patch = parts[2];
+
+            //     if (parts[0].equals("\"\"PatchIndex\"\"")){
+            //         continue;
+            //     }
+
+            //     int patchIndex = Integer.parseInt(parts[0].replace("\"",""));
+
+            //     if(patchIndexDic.contains(patchIndex)) {
+            //         continue;
+            //     } else {
+            //         patchIndexDic.add(patchIndex);
+            //     }
+                
+            //     System.out.println("Patch: " + patch);
+            //     System.out.println(parts[0] + " " + parts[1] + " " + parts[2]);
+
+            //     String regex = "(?<=\\s\"\")[^\"]+(?=\"\")";
+            //     Pattern pattern = Pattern.compile(regex);
+            //     Matcher matcher = pattern.matcher(patch);
+
+            //     if (matcher.find()) {
+            //         String filePath = matcher.group();
+            //         System.out.println("Extracted file path: " + filePath);
+
+            //         String sourceAbsPath = "/home/diantu/Documents/gin/examples/jcodec/" + filePath;
+                    
+            //         String patchedFile = producePatch(sourceAbsPath, replaceAndRemoveQuotes(patch));
+
+            //         patchDic.add(patchedFile);
+            //     } else {
+            //         System.out.println("Wrong patch format");
+            //     }
+                
+            // }
+        } catch (IOException | CsvException e) {
             e.printStackTrace();
         }
         return patchDic;
@@ -190,9 +243,19 @@ public class Patch_Comparison implements Serializable{
 
         for (String editString : editStrings) {
 
+            if(editString.trim().equals("")) {
+                continue;
+            }
+
             String[] tokens = editString.trim().split("\\s+");
 
             String editAction = tokens[0];
+
+            System.out.println("Edit action: " + editAction);
+            System.out.println("Edit string: " + editString);
+
+            
+            
 
             Class<?> clazz = null;
 
