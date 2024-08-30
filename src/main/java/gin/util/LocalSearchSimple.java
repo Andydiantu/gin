@@ -165,7 +165,7 @@ public abstract class LocalSearchSimple extends GP {
     // TODO: This is a bit of a hack, as it assumes that if only put one edit type, it is LLMReplaceStatement or LLMMaskedStatement
     protected Patch mutate(Patch oldPatch) {
         Patch patch = oldPatch.clone();
-        patch = neighbour(patch);
+        patch.addRandomEditOfClasses(super.mutationRng, super.editTypes);
 
         return patch;
     }

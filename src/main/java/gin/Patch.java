@@ -215,7 +215,19 @@ public class Patch implements Serializable, Cloneable {
         Edit edit = null;
 
         // decide what edit we're doing to make
+        Logger.info("Choosing an edit type from: " + allowableEditTypes);
         Class<? extends Edit> editType = allowableEditTypes.get(rng.nextInt(allowableEditTypes.size()));
+
+        if(allowableEditTypes.size() == 5){
+            if (rng.nextFloat() < 0.5) {
+                editType = allowableEditTypes.get(0);
+                Logger.info("Chosen LLM edit type is" + editType);
+            } else {
+                editType = allowableEditTypes.get(rng.nextInt(4) + 1);
+                Logger.info(null, "Chosen non-LLM edit type is" + editType);
+            }
+        }
+
 
         // make one
         try {
